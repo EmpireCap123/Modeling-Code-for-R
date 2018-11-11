@@ -1,0 +1,107 @@
+# Univariate/Bivariate analysis
+# Scatterplot
+ggplot(data = df, aes(x = df$a, y = df$b) +
+  geom_point()
+  
+# linear regression model
+model <- lm(formula = y ~ x, data = df)
+fitted.values(model)
+residuals(model)
+
+## model fit
+library(broom)
+model <- lm(y ~ x, data = df)
+model %>%
+  augment() %>%
+    summarize(SSE = sum(.resid^2))
+summary(model)
+
+### cook's distance
+model %>%
+  augment() %>%
+    arrange(desc(.cooksd)) %>%
+      select(y, x, .fitted, .resid, .hat, .cooksd) %>%
+        head()
+        
+***** start of clustering code *****
+
+# Dummification in R
+dummy.data.frame(df)
+dist(df, method = "binary")
+
+# Hierarchical clustering
+dist_df <- dist(df, method = 'euclidean')       *other methods are available
+hc_df <- hclust(dist_df, method = 'complete')   *other methods are available
+
+# Using the cutree approach on a Dendrogram to select the number of clusters
+cluster_assignments <- cutree(hc_df, k = 2)
+print(cluster_assignments)
+library(dplyr)
+players_clustered <- mutate(df, cluster = cluster_assignments)
+print(players_clustered)
+
+# Visualizing K-clusters
+library(ggplot2)
+ggplot(players_clustered, aes(x = x, y = y, color = factor(cluster))) +
+  geom_point()
+  
+# Visualizing the Dendrogram
+x = hclust(*, "complete")
+y = height
+plot(hc_players)
+
+# Coloring the Dendrogram - height or cluster count
+library(dendextend)
+dend_players <- as.dendrogram(hc_players)
+dend_colored <- color_branches(dend_players, h = 15)    *h = 15 for height cut, k = # for cluster count
+plot(dend_colored)
+
+***** K-means *****
+
+# Generating the Elbow Plot
+model <- kmeans(df, centers = 2)
+library(purrr)
+tot_withinss <- map_dbl(1:10, function(k){
+  model <- kmeans(x = lineup, centers = k)
+  model$tot.withinss
+  })
+elbow_df <- data.frame(
+  k = 1:10
+  tot_withinss = tot_withinss
+  )
+print(elbow_df)
+ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
+  geom_line() +
+  scale_x_continuous(breaks = 1:10)
+  
+***** Silhouette Plot *****
+
+sil_plot <- silhouette(pam_k3)
+plot(sil_plot)
+library(purrr)
+sil_width <- map_dbl(2:10, function(k) {
+  model <- pam(x = lineup, k = k)
+  model$silinfo$avg.width
+  })
+print(sil_df)   # the highest average silhouette width is the best recommendation for k
+
+***** k-Nearest Neighbors (kNN) *****
+
+library(class)
+pred <- knn(training_data, testing_data, training_labels)
+sign_types <- signs$sign_type
+signs_pred <- knn(train = signs[-1], test = test_signs[-1], cl = sign_types)
+
+# Create confusion matrix of the predicted vs actual values
+
+signs_actual <- test_signs$sign_type
+table(signs_pred, signs_actual)
+
+# Compute accuracy
+means(signs_pred == signs_actual)
+
+# Normalize data (scaling)
+normalize <- function(x) {
+  return((x - min(x) / max(x) - min(x)))
+  }
+summary(normalize(signs$r1))
