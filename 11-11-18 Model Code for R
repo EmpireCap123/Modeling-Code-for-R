@@ -105,3 +105,242 @@ normalize <- function(x) {
   return((x - min(x) / max(x) - min(x)))
   }
 summary(normalize(signs$r1))
+
+***** Naive Bayes model *****
+
+library(naivebayes)
+m <- naive_bayes(y ~ x, data = df)
+future_location <- predict(m, future_conditions)
+
+***** Logistic GLM *****
+
+m <- glm(y ~ x1 + x2 + x3, 
+  data = my_dataset,
+  family = "binomial")              # family = binomial, tells R to use logistic regression form of GLM
+prob <- predict(m, test_dataset,    # this applies probability predictions to the test set
+  type = "response")                # type = response, produces probabilities rather than log-odds values
+pred <- ifelse(prob > 0.5, 1, 0)    # this turns probabilities into predictions of success/failure based on the parameter prob > x)
+mean(response variable == pred)     # this is a measure of model accuracy
+
+# ROC for model accuracy/validation
+
+library(pROC)
+ROC <- roc(actual data, predicted)
+plot(ROC, col = "blue")
+auc(ROC)
+
+# Dummy coding categorical data
+# create gender factor
+
+my_data$genderr <- factor(my_data$gender,
+  levels = c(0, 1, 2), 
+  labels = c("Male", "Female", "Other"))
+
+# Interaction effects
+# Interaction of variables x1 and x2
+glm(y ~ x1 * x2,
+  data = health,
+  family = "binomial")
+  
+***** Stepwise Regression *****
+
+# Specify a null model with no predictors
+null_model <- glm(y ~ 1, data = df, familiy = "binomial")
+
+# Specify the full model using all of the potential predictors
+full_model <- glm(y ~ ., data = df, family = "binomial")
+
+# Use a forward stepwise algorithm to build a parsimonious model
+step_model <- step(null_model, scope = list(lower = null_model, upper = full_model), direction = "forward")
+
+# Estimate the stepwise donation probability
+step_prob <- predict(step_model, type = "response")
+
+# Plot the ROC of the stepwise model
+library(pROC)
+ROC <- roc(df$column, step_prob)
+plot(ROC, col = "red")
+auc(ROC)
+
+***** Building Classification Trees *****
+
+# building a simple rpart classification tree
+library(rpart)
+m <- rpart(y ~ x1 + x2, data = df,
+  method = "class")     # method = "class", instructs the algorithm to be a classification model
+
+# making predictions from an rpart tree
+p <- predict(m, test_data, type = "class")
+
+## evaluating model performance
+train <- nrow(df) * 0.75
+
+# create a random sample of row IDs
+sample_rows <- sample(11312, 8484)
+
+# create the training dataset
+loans_train <- loans[sample_rows, ]
+
+# create the test dataset
+loans_test <- loans[-sample_rows, ]
+
+## Grow a tree using all of the available data
+model <- rpart(y ~ ., data = df, method = "class", control = rpart.control(cp = 0))
+
+# Make predictions on the test dataset
+df$pred <- predict(model, test_data, type = "class")
+
+# Examine the confusion matrix
+table(df$pred, df$outcome)
+
+# Compute the accuracy on the test datset
+mean(df$pred == df$outcome)
+
+# pre-pruning with rpart
+library(rpart)
+prune_control <- rpart.control(maxdepth = 30, minsplit = 20)
+m <- rpart(y ~ x1 + x2,
+  data = df,
+  method = "class",
+  control = prune_control)
+
+# post-pruning with rpart
+m <- rpart(y ~ x1 + x2,
+  data = loans,
+  method = "class")
+plotcp(m)
+m_pruned <- prune(m, cp = 0.20)
+
+# Grow a tree with maxdepth of 6
+model <- rpart(y ~ ., data = df, method = "class", control = rpart.control(cp = 0, maxdepth = 6))
+
+# Compute the accuracy of the simpler tree
+df$pred <- predict(model, test_data, type = "class")
+mean(test_data$pred == test_data$outcome)
+
+# Grow a tree with minsplit of 500
+model2 <- rpart(y ~ ., data = df, method = "class", control = rpart.control(cp = 0, minsplit = 500))
+
+# Compute the accuracy of the simpler tree
+test_data$pred2 <- predict(model2, test_data, type = "class")
+mean(test_data$pred2 == test_data$outcome)
+
+***** Random Forests *****
+
+# building a simple random forest
+library(randomForest)
+m <- randomForest(y ~ x1 + x2, data = df,
+  ntree = 500,      # number of trees in the forest
+  mtry = sqrt(p))   # number of predictors (p) per tree, can start with square root of p
+
+# making predictions from a random forest
+p <- predict(m, test_data)
+
+***** K-means clustering *****
+
+# k-means algorithm with 5 centers, run 20 times
+kmeans(df, centers = 5, nstart = 20)
+
+## Plotting clusters
+# Set up 2 x 3 plotting grid
+par(mfrow = c(2, 3))
+
+# Set seed
+set.seed(1)
+
+for(i in 1:6) {
+  # Run kmeans() on df with three clusters and one start
+  km.out <- kmeans(df, centers = 3, nstart = 1)
+  
+  # Plot clusters
+  plot(df, col = km.out$cluster,
+    main = km.out$tot.withinss,
+    xlab = "", ylab = "")
+    
+# Draw a Dendrogram
+plot(hclust.out)
+
+## Elbow plot
+# Initialize total within sum of squares error: wss
+wss <- 0
+
+# For 1 to 15 cluster centers
+for (i in 1:15) {
+  km.out <- kmeans(df, centers = i, nstart = 20)
+# Save total within sum of squares to wss variable
+  wss[i] <- km.out$tot.withinss
+}
+
+# Plot total within sum of squares vs number of clusters
+plot(1:15, wss, type = "b")
+  xlab = "Number of Clusters",
+  ylab = "Within groups of sum of squares")
+
+# Set k equal to the number of clusters corresponding to the elbow location
+k <- 2 # 3 is probably OK, too
+
+***** Hierarchical Clustering *****
+
+# calculate distance between observations
+dist_matrix <- dist(x)
+
+# Returns hierarchical clustering model
+hclust.out <- hclust(d = dist_matrix)
+
+# Inspect the result
+summary(hclust.out)
+
+# draw a Dendrogram
+plot(hclust.out)
+abline(h = 6, col = "red")
+
+# Tree cutting - cut by height = h
+cutree(hclust.out, h = 6)
+
+# Tree cutting - cut by number of clusters = k
+cutree(hclust.out, k = 2)
+
+# fitting hierarchical clustering models using different methods
+hclust.complete <- hclust(df, method = "complete")
+hclust.average <- hclust(df, method = "average")
+hclust.single <- hclust(df, method = "single")
+
+# check if scaling is necessary
+colMeans(df)
+apply(df, 2, sd)
+
+# produce a new matrix with columns of mean of 0 and sd of 1
+scaled_df <- scale(df)
+colMeans(scaled_df)
+apply(scaled_df, 2, sd)
+
+***** Primary Components Analysis (PCA) *****
+
+pr.iris <- prcomp(x = iris[-5], scale = FALSE, center = TRUE)
+summary(pr.iris)    # this prints the importance of the components
+prcomp(x = data, scale = TRUE, center = TRUE, rotation = TRUE)
+
+# Biplots and scree plots in R
+pr.iris <- prcomp(x = iris[-5], scale = FALSE, center = TRUE)
+biplot(pr.iris)
+
+# Getting proportion of variance for scree plot
+pr.var <- pr.iris$dev^2
+pve <- pr.var / sum(pr.var)
+
+# plot variance explained for each principal component
+plot(pve, xlab = "Principal Component",
+  ylab = "Proportion of Variance Explained",
+  ylim = c(0, 1), type = "b")
+
+# Plot variance explained for each principal component
+plot(cumsum(pve), xlab = "Principal Component",
+  ylab = "Cumulative Proportion of Variance Explained",
+  ylim = c(0, 1), type = "b")
+  
+# Means and Standard Deviations 
+colMeans(df)
+apply(df, 2, sd)
+
+# Scaling and PCA in R
+prcomp(df, center = TRUE, scale = FALSE)
